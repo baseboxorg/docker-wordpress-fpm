@@ -1,14 +1,4 @@
-FROM php:fpm
-
-ENV DBNAME wordpress
-ENV DBUSER root
-ENV DBPASS wordpress
-ENV DBHOST localhost
-ENV ADMIN_NAME admin123
-ENV ADMIN_PASS Admin_passwoRD
-ENV EMAIL admin@wordpress.org
-ENV URL http://docker.vm
-ENV TITLE WordPress
+FROM php:7.0.6-fpm
 
 # install the PHP extensions we need
 RUN apt-get update && apt-get install -y libpng12-dev libjpeg-dev && rm -rf /var/lib/apt/lists/* \
@@ -28,29 +18,15 @@ RUN { \
 
 VOLUME /var/www/html
 
-#
-# Install WP-CLI
-#
-RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli-nightly.phar \
-    && chmod +x wp-cli-nightly.phar \
-    && mv wp-cli-nightly.phar /usr/local/bin/wp
+ENV WORDPRESS_VERSION 4.5.2
+ENV WORDPRESS_SHA1 bab94003a5d2285f6ae76407e7b1bbb75382c36e
 
-RUN wp core download --allow-root \
-    && wp core config --allow-root \
-      --dbname=$DBNAME \
-      --dbuser=$DBUSER \
-      --dbpass=$DBPASS \
-      --dbhost=$DBHOST \
-    && wp core install --allow-root \
-      --admin_name=$ADMIN_NAME \
-      --admin_password=$ADMIN_PASS \
-      --admin_email=$EMAIL \
-      --url=$URL \
-      --title=$TITLE \
-    && wp theme update --allow-root --all \
-    && wp plugin update --allow-root --all \
-    && chown -R www-data:www-data /usr/src/wordpress
-
+# upstream tarballs include ./wordpress/ so this gives us /usr/src/wordpress
+RUN curl -o wordpress.tar.gz -SL https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz \
+	&& echo "$WORDPRESS_SHA1 *wordpress.tar.gz" | sha1sum -c - \
+	&& tar -xzf wordpress.tar.gz -C /usr/src/ \
+	&& rm wordpress.tar.gz \
+	&& chown -R www-data:www-data /usr/src/wordpress
 
 COPY docker-entrypoint.sh /entrypoint.sh
 
